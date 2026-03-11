@@ -1,0 +1,94 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+}
+
+.funnel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.funnel-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.funnel-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 130px;
+    font-size: var(--font-sm);
+    color: var(--gray-700);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.funnel-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.funnel-bar {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.5s ease;
+    min-width: 4px;
+}
+
+.funnel-count {
+    font-size: var(--font-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--gray-700);
+    min-width: 28px;
+    text-align: right;
+}
+
+.followup-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.followup-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.followup-item:last-child {
+    border-bottom: none;
+}
+
+.followup-item.overdue {}
+
+.followup-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.followup-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}

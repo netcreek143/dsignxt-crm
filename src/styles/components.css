@@ -1,0 +1,128 @@
+.settings-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    background: none;
+    border: none;
+    color: var(--gray-600);
+    font-size: var(--font-base);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.settings-nav-item:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+}
+
+.settings-nav-item.active {
+    background: var(--primary-50);
+    color: var(--primary-600);
+}
+
+.client-detail-header {
+    margin-bottom: var(--space-6);
+}
+
+.client-detail-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: var(--space-3);
+}
+
+.note-input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.note-item {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.note-item:last-child {
+    border-bottom: none;
+}
+
+.note-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.note-body {
+    font-size: var(--font-sm);
+    color: var(--gray-700);
+    line-height: 1.5;
+    padding-left: 32px;
+}
+
+.detail-section {
+    margin-bottom: var(--space-2);
+}
+
+.detail-section-title {
+    font-size: var(--font-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--gray-900);
+    margin-bottom: var(--space-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-field label {
+    font-size: var(--font-xs);
+    color: var(--gray-500);
+}
+
+.detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-sm);
+    color: var(--gray-700);
+}
+
+.detail-row svg {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.detail-label {
+    color: var(--gray-500);
+    min-width: 90px;
+    font-size: var(--font-xs);
+}

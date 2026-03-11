@@ -1,0 +1,29 @@
+.leads-filters {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-4);
+    background: var(--surface-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
+}
+
+.leads-search-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.lead-name-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.bulk-actions {
+    animation: fadeIn var(--transition-fast) forwards;
+}
