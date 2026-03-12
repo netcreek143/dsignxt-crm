@@ -46,6 +46,6 @@ Whenever you update your code and push it to GitHub, Render will automatically d
 Because we are using unified serving, your endpoints look exactly like this universally:
 - CRM Portal: `https://your-crm.onrender.com/`
 - API Route: `https://your-crm.onrender.com/api/login`
-- Webhook Ingestion: `https://your-crm.onrender.com/api/webhooks/your_key`
+- Webhook Ingestion: `https://dsignxt-crm.onrender.com/api/webhooks/your_key`
 
 You can just copy the Webhook URLs generated in your UI and trust them directly in Google Sheets!
