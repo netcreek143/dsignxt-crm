@@ -214,9 +214,15 @@ app.post('/api/ingest/:key', handleWebhook);
 // Unified Production Serve
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../dist')));
-    // Use the mandatory named wildcard for Express 5
-    app.get('/:path*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
+    
+    // Bulletproof catch-all for SPAs in Express 5:
+    // Use a middleware instead of a route to bypass path-to-regexp parsing issues
+    app.use((req, res, next) => {
+        if (req.method === 'GET' && !req.path.startsWith('/api')) {
+            res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
+        } else {
+            next();
+        }
     });
 }
 

@@ -38,7 +38,7 @@ That's literally it! Render will automatically:
 1. Install your packages.
 2. Build your React Frontend utilizing Vite.
 3. Start the combined Node.js Express Server.
-4. Issue you a secure `https://your-crm.onrender.com` URL automatically!
+4. Issue you a secure `https://dsignxt-crm.onrender.com` URL automatically!
 
 Whenever you update your code and push it to GitHub, Render will automatically detect it, rebuild silently, and go live without any disturbance to you or your clients.
 
