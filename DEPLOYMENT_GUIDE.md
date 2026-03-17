@@ -26,12 +26,11 @@ Fill in the deployment settings exactly like this:
 - **Start Command:** `npm run start`
 - **Plan:** Free
 
-### Step 4: Important Note About Free Tiers and "Disks"
-*(Note: Render previously offered persistent "Disks" on their free tier, but this feature is now reserved for paid Starter plans. If you deploy on the Free tier, your CRM will work perfectly, but because you are using SQLite (a file-based database), any new data you add will be reset when the free server goes to sleep due to inactivity.)*
-
-If you just want to test the CRM live to see how it works, **you can completely skip attaching a disk** and proceed to Step 5!
-
-*If you need your data to be permanently saved for free during this phase without upgrading Render, let the AI assistant know! We can seamlessly upgrade your local SQLite database to a **free cloud database** (like Turso or Neon) which takes 2 minutes and guarantees your data is safe forever.*
+### Step 4: Configure Environment Variables
+1. In the Render Dashboard, go to **Environment Settings**.
+2. Add an environment variable:
+   - **Key:** `MONGODB_URI`
+   - **Value:** `your-mongodb-atlas-connection-string-from-env`
 
 ### Step 5: Click "Create Web Service"
 That's literally it! Render will automatically:

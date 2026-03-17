@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { db, initDb, dbRun, dbQuery, dbGet } from './db.js';
+import { connectDB, initMongoSeeds, User, Client, Integration, Lead } from './mongo.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,7 +14,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Initialize DB schemas
-initDb();
+// Initialize MongoDB
+connectDB().then(() => {
+    initMongoSeeds();
+});
 
 // -----------------------------------------
 // CRM API: Auth
@@ -23,7 +26,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         console.log(`🔑 Login attempt: ${email}`);
-        const user = await dbGet('SELECT * FROM users WHERE email = ? AND password = ?', [email, password]);
+        const user = await User.findOne({ email, password }).lean();
         if (user) {
             // Remove password from response
             const { password, ...safeUser } = user;
@@ -36,7 +39,7 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await dbQuery('SELECT id, name, email, role, status, initials, color, createdAt, clientId, permissions FROM users');
+        const users = await User.find({}, '-password').lean();
         res.json(users);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -45,7 +48,7 @@ app.post('/api/users', async (req, res) => {
     try {
         const { name, email, role, assignedClientIds, clientId, permissions } = req.body;
         const id = `u_${Date.now()}`;
-        const password = req.body.password || 'dsignxt123'; // Custom password or default
+        const password = req.body.password || 'dsignxt123';
         const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
         const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
         const color = colors[Math.floor(Math.random() * colors.length)];
@@ -53,46 +56,45 @@ app.post('/api/users', async (req, res) => {
         const defaultPerms = JSON.stringify(['dashboard', 'clients', 'leads', 'pipeline', 'integrations', 'analytics', 'team', 'settings']);
         const finalPerms = permissions ? JSON.stringify(permissions) : defaultPerms;
 
-        await dbRun(
-            `INSERT INTO users (id, name, email, password, role, initials, color, clientId, permissions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, name, email, password, role, initials, color, clientId || null, finalPerms]
-        );
+        const newUser = new User({
+            id, name, email, password, role, initials, color, clientId: clientId || null, permissions: finalPerms
+        });
+        await newUser.save();
 
-        // Update assigned clients
         if (assignedClientIds && assignedClientIds.length > 0) {
-            for (const clientId of assignedClientIds) {
-                const client = await dbGet('SELECT assignedUsers FROM clients WHERE id = ?', [clientId]);
-                let assignedUsers = client.assignedUsers ? JSON.parse(client.assignedUsers) : [];
-                if (!assignedUsers.includes(id)) {
-                    assignedUsers.push(id);
-                    await dbRun('UPDATE clients SET assignedUsers = ? WHERE id = ?', [JSON.stringify(assignedUsers), clientId]);
+            for (const cId of assignedClientIds) {
+                const client = await Client.findOne({ id: cId });
+                if (client) {
+                    let assignedUsers = client.assignedUsers ? JSON.parse(client.assignedUsers) : [];
+                    if (!assignedUsers.includes(id)) {
+                        assignedUsers.push(id);
+                        client.assignedUsers = JSON.stringify(assignedUsers);
+                        await client.save();
+                    }
                 }
             }
         }
 
-        res.status(201).json(await dbGet('SELECT id, name, email, role, status, initials, color, createdAt, clientId, permissions FROM users WHERE id = ?', [id]));
+        res.status(201).json(await User.findOne({ id }, '-password').lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch('/api/users/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const existing = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
+        const existing = await User.findOne({ id });
         if (!existing) return res.status(404).json({ error: 'User not found' });
 
-        const name = req.body.name ?? existing.name;
-        const email = req.body.email ?? existing.email;
-        const password = req.body.password ?? existing.password;
-        const role = req.body.role ?? existing.role;
-        const status = req.body.status ?? existing.status;
-        const permissions = req.body.permissions ? JSON.stringify(req.body.permissions) : existing.permissions;
+        existing.name = req.body.name ?? existing.name;
+        existing.email = req.body.email ?? existing.email;
+        existing.password = req.body.password ?? existing.password;
+        existing.role = req.body.role ?? existing.role;
+        existing.status = req.body.status ?? existing.status;
+        existing.permissions = req.body.permissions ? JSON.stringify(req.body.permissions) : existing.permissions;
 
-        await dbRun(
-            `UPDATE users SET name = ?, email = ?, password = ?, role = ?, status = ?, permissions = ? WHERE id = ?`,
-            [name, email, password, role, status, permissions, id]
-        );
+        await existing.save();
 
-        res.json(await dbGet('SELECT id, name, email, role, status, initials, color, createdAt, clientId, permissions FROM users WHERE id = ?', [id]));
+        res.json(await User.findOne({ id }, '-password').lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -101,7 +103,7 @@ app.patch('/api/users/:id', async (req, res) => {
 // -----------------------------------------
 app.get('/api/clients', async (req, res) => {
     try {
-        const clients = await dbQuery('SELECT * FROM clients');
+        const clients = await Client.find({}).lean();
         res.json(clients);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -110,33 +112,30 @@ app.post('/api/clients', async (req, res) => {
     try {
         const { name, industry, contactEmail, color, initials } = req.body;
         const id = `c_${Date.now()}`;
-        await dbRun(
-            `INSERT INTO clients (id, name, industry, contactEmail, color, initials) VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, name, industry, contactEmail, color, initials]
-        );
-        res.status(201).json(await dbGet('SELECT * FROM clients WHERE id = ?', [id]));
+        const newClient = new Client({
+            id, name, industry, contactEmail, color, initials
+        });
+        await newClient.save();
+        res.status(201).json(await Client.findOne({ id }).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch('/api/clients/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const existing = await dbGet('SELECT * FROM clients WHERE id = ?', [id]);
+        const existing = await Client.findOne({ id });
         if (!existing) return res.status(404).json({ error: 'Client not found' });
 
-        const name = req.body.name ?? existing.name;
-        const industry = req.body.industry ?? existing.industry;
-        const contactEmail = req.body.contactEmail ?? existing.contactEmail;
-        const status = req.body.status ?? existing.status;
-        const notes = req.body.notes ?? existing.notes;
-        const customFields = req.body.customFields ? JSON.stringify(req.body.customFields) : existing.customFields;
+        existing.name = req.body.name ?? existing.name;
+        existing.industry = req.body.industry ?? existing.industry;
+        existing.contactEmail = req.body.contactEmail ?? existing.contactEmail;
+        existing.status = req.body.status ?? existing.status;
+        existing.notes = req.body.notes ?? existing.notes;
+        existing.customFields = req.body.customFields ? JSON.stringify(req.body.customFields) : existing.customFields;
 
-        await dbRun(
-            `UPDATE clients SET name = ?, industry = ?, contactEmail = ?, status = ?, customFields = ?, notes = ? WHERE id = ?`,
-            [name, industry, contactEmail, status, customFields, notes, id]
-        );
+        await existing.save();
 
-        res.json(await dbGet('SELECT * FROM clients WHERE id = ?', [id]));
+        res.json(await Client.findOne({ id }).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -145,7 +144,7 @@ app.patch('/api/clients/:id', async (req, res) => {
 // -----------------------------------------
 app.get('/api/integrations', async (req, res) => {
     try {
-        res.json(await dbQuery('SELECT * FROM integrations'));
+        res.json(await Integration.find({}).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -156,11 +155,12 @@ app.post('/api/integrations', async (req, res) => {
         const webhookKey = `wk_${Date.now().toString(36)}`;
         const baseUrl = process.env.NODE_ENV === 'production' ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3001';
         const webhookUrl = `${baseUrl}/api/webhooks/${webhookKey}`;
-        await dbRun(
-            `INSERT INTO integrations (id, clientId, type, label, webhookKey, webhookUrl, platform) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, clientId, type, label, webhookKey, webhookUrl, platform]
-        );
-        res.status(201).json(await dbGet('SELECT * FROM integrations WHERE id = ?', [id]));
+        
+        const newIntegration = new Integration({
+            id, clientId, type, label, webhookKey, webhookUrl, platform
+        });
+        await newIntegration.save();
+        res.status(201).json(await Integration.findOne({ id }).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -169,7 +169,7 @@ app.post('/api/integrations', async (req, res) => {
 // -----------------------------------------
 app.get('/api/leads', async (req, res) => {
     try {
-        res.json(await dbQuery('SELECT * FROM leads ORDER BY createdAt DESC'));
+        res.json(await Lead.find({}).sort({ createdAt: -1 }).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -179,25 +179,32 @@ app.get('/api/leads', async (req, res) => {
 const handleWebhook = async (req, res) => {
     try {
         const key = req.params.key;
-        // Find integration by key
-        const integration = await dbGet('SELECT * FROM integrations WHERE webhookKey = ?', [key]);
+        const integration = await Integration.findOne({ webhookKey: key });
         if (!integration) return res.status(401).json({ error: 'Invalid or revoked Webhook Key.' });
 
-        // Map payload fields (generic simple mapping)
         const payload = req.body || {};
         const fullName = payload.name || payload.fullName || payload.first_name || 'Unknown Lead';
         const email = payload.email || payload.mail || '';
         const phone = payload.phone || payload.mobile || '';
 
         const leadId = `l_${Date.now()}`;
-        await dbRun(
-            `INSERT INTO leads (id, clientId, integrationId, fullName, email, phone, sourceType, sourceLabel, customData) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [leadId, integration.clientId, integration.id, fullName, email, phone, integration.type, integration.label, JSON.stringify(payload)]
-        );
+        const newLead = new Lead({
+            id: leadId,
+            clientId: integration.clientId,
+            integrationId: integration.id,
+            fullName,
+            email,
+            phone,
+            sourceType: integration.type,
+            sourceLabel: integration.label,
+            customData: JSON.stringify(payload)
+        });
+        await newLead.save();
 
         // Update integration total
-        await dbRun(`UPDATE integrations SET leadsTotal = leadsTotal + 1, lastSync = CURRENT_TIMESTAMP WHERE id = ?`, [integration.id]);
+        integration.leadsTotal += 1;
+        integration.lastSync = new Date();
+        await integration.save();
 
         console.log(`✅ Lead Ingested: ${fullName} (${email}) for Client ${integration.clientId}`);
 
