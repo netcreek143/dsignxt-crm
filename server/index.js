@@ -153,7 +153,9 @@ app.post('/api/integrations', async (req, res) => {
         const { clientId, type, label, platform } = req.body;
         const id = `int_${Date.now()}`;
         const webhookKey = `wk_${Date.now().toString(36)}`;
-        const baseUrl = process.env.NODE_ENV === 'production' ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3001';
+        const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
         const webhookUrl = `${baseUrl}/api/webhooks/${webhookKey}`;
         
         const newIntegration = new Integration({
@@ -182,8 +184,8 @@ const handleWebhook = async (req, res) => {
         const integration = await Integration.findOne({ webhookKey: key });
         if (!integration) return res.status(401).json({ error: 'Invalid or revoked Webhook Key.' });
 
-        const payload = req.body || {};
-        const fullName = payload.name || payload.fullName || payload.first_name || 'Unknown Lead';
+        const payload = { ...req.body };
+        const fullName = payload.name || payload.fullName || payload.full_name || 'Unknown Lead';
         const email = payload.email || payload.mail || '';
         const phone = payload.phone || payload.mobile || '';
 
@@ -197,6 +199,11 @@ const handleWebhook = async (req, res) => {
             phone,
             sourceType: integration.type,
             sourceLabel: integration.label,
+            utm_source: payload.utm_source || '',
+            utm_medium: payload.utm_medium || '',
+            utm_campaign: payload.utm_campaign || '',
+            utm_term: payload.utm_term || '',
+            utm_content: payload.utm_content || '',
             customData: JSON.stringify(payload)
         });
         await newLead.save();
@@ -217,6 +224,59 @@ const handleWebhook = async (req, res) => {
 
 app.post('/api/webhooks/:key', handleWebhook);
 app.post('/api/ingest/:key', handleWebhook);
+
+// Serve the ingestion script
+app.get('/api/ingest.js', (req, res) => {
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`
+(function() {
+    const script = document.currentScript;
+    const key = script.getAttribute('data-key');
+    if (!key) return console.error('DSignXT: data-key attribute is missing');
+    
+    const endpoint = "${baseUrl}/api/webhooks/" + key;
+
+    window.addEventListener('submit', async (e) => {
+        // Find if the submitted form contains our script or is the target
+        const form = e.target;
+        if (form.getAttribute('data-dsignxt-ignore')) return;
+
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((value, key) => { data[key] = value; });
+        
+        // Basic mapping for common fields
+        const urlParams = new URLSearchParams(window.location.search);
+        const payload = {
+            name: data.name || data.fullName || data.full_name || '',
+            email: data.email || data.email_address || '',
+            phone: data.phone || data.tel || data.mobile || '',
+            utm_source: urlParams.get('utm_source') || '',
+            utm_medium: urlParams.get('utm_medium') || '',
+            utm_campaign: urlParams.get('utm_campaign') || '',
+            utm_term: urlParams.get('utm_term') || '',
+            utm_content: urlParams.get('utm_content') || '',
+            ...data
+        };
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) console.log('DSignXT: Lead ingested successfully');
+        } catch (err) {
+            console.error('DSignXT: Ingestion failed', err);
+        }
+    });
+})();
+    `);
+});
 
 // Unified Production Serve
 if (process.env.NODE_ENV === 'production') {

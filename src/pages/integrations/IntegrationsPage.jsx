@@ -127,7 +127,7 @@ function SetupWizard({ type, onClose }) {
     const Icon = platformIcon[type];
 
     const sampleKey = `wk_${Date.now().toString(36)}`;
-    const baseUrl = window.location.origin;
+    const baseUrl = window.location.origin.replace(':5173', ':3001');
     const sampleWebhook = `${baseUrl}/api/webhooks/${sampleKey}`;
     const embedCode = `<script src="${baseUrl}/api/ingest.js" data-key="${sampleKey}"></script>`;
 
@@ -231,6 +231,9 @@ function SetupWizard({ type, onClose }) {
     name: sheet.getRange(row, 1).getValue(),
     email: sheet.getRange(row, 2).getValue(),
     phone: sheet.getRange(row, 3).getValue(),
+    utm_source: sheet.getRange(row, 4).getValue() || "",
+    utm_medium: sheet.getRange(row, 5).getValue() || "",
+    utm_campaign: sheet.getRange(row, 6).getValue() || ""
   };
   
   UrlFetchApp.fetch("${createdIntegration?.webhookUrl || 'GENERATING_URL'}", {
@@ -241,7 +244,7 @@ function SetupWizard({ type, onClose }) {
 }`}
                             </div>
                             <button className="btn btn-sm btn-secondary mt-3" onClick={() => {
-                                const code = `function onEdit(e) {\n  var sheet = e.source.getActiveSheet();\n  var row = e.range.getRow();\n  var payload = {\n    name: sheet.getRange(row, 1).getValue(),\n    email: sheet.getRange(row, 2).getValue(),\n    phone: sheet.getRange(row, 3).getValue(),\n  };\n  UrlFetchApp.fetch("${createdIntegration?.webhookUrl}", {\n    method: "post",\n    contentType: "application/json",\n    payload: JSON.stringify(payload)\n  });\n}`;
+                                const code = `function onEdit(e) {\n  var sheet = e.source.getActiveSheet();\n  var row = e.range.getRow();\n  var payload = {\n    name: sheet.getRange(row, 1).getValue(),\n    email: sheet.getRange(row, 2).getValue(),\n    phone: sheet.getRange(row, 3).getValue(),\n    utm_source: sheet.getRange(row, 4).getValue() || "",\n    utm_medium: sheet.getRange(row, 5).getValue() || "",\n    utm_campaign: sheet.getRange(row, 6).getValue() || ""\n  };\n  UrlFetchApp.fetch("${createdIntegration?.webhookUrl}", {\n    method: "post",\n    contentType: "application/json",\n    payload: JSON.stringify(payload)\n  });\n}`;
                                 navigator.clipboard.writeText(code);
                             }}><Copy size={12} /> Copy Code</button>
                         </div>

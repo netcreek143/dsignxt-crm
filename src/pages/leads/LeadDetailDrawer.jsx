@@ -106,32 +106,40 @@ export default function LeadDetailDrawer({ leadId, onClose }) {
                                     {lead.adSet && <div className="detail-row"><span className="detail-label">Ad Set</span><span>{lead.adSet}</span></div>}
                                     {lead.adName && <div className="detail-row"><span className="detail-label">Ad</span><span>{lead.adName}</span></div>}
                                     {lead.formName && <div className="detail-row"><span className="detail-label">Form</span><span>{lead.formName}</span></div>}
-                                    {lead.utmSource && <div className="detail-row"><span className="detail-label">UTM Source</span><span>{lead.utmSource}</span></div>}
-                                    {lead.utmMedium && <div className="detail-row"><span className="detail-label">UTM Medium</span><span>{lead.utmMedium}</span></div>}
+                                    {lead.utm_source && <div className="detail-row"><span className="detail-label">UTM Source</span><span>{lead.utm_source}</span></div>}
+                                    {lead.utm_medium && <div className="detail-row"><span className="detail-label">UTM Medium</span><span>{lead.utm_medium}</span></div>}
+                                    {lead.utm_campaign && <div className="detail-row"><span className="detail-label">UTM Campaign</span><span>{lead.utm_campaign}</span></div>}
+                                    {lead.utm_term && <div className="detail-row"><span className="detail-label">UTM Term</span><span>{lead.utm_term}</span></div>}
+                                    {lead.utm_content && <div className="detail-row"><span className="detail-label">UTM Content</span><span>{lead.utm_content}</span></div>}
                                 </div>
                             </div>
 
                             <div className="divider" />
 
-                            {/* Custom Fields */}
-                            {client?.customFields && JSON.parse(client.customFields).length > 0 && (
-                                <div className="detail-section">
-                                    <h4 className="detail-section-title">Custom Fields</h4>
-                                    <div className="detail-list">
-                                        {JSON.parse(client.customFields).map(field => {
-                                            const customData = lead.customData ? JSON.parse(lead.customData) : {};
-                                            const value = customData[field.key] || customData[field.label] || '—';
-                                            return (
-                                                <div key={field.key} className="detail-row">
-                                                    <span className="detail-label">{field.label}</span>
-                                                    <span>{value}</span>
+                            {/* Dynamic Source Data */}
+                            {(() => {
+                                const customData = lead.customData ? JSON.parse(lead.customData) : {};
+                                const coreKeys = ['name', 'fullName', 'email', 'phone', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'sourceType', 'sourceLabel'];
+                                const dynamicKeys = Object.keys(customData).filter(key => !coreKeys.includes(key));
+
+                                if (dynamicKeys.length === 0) return null;
+
+                                return (
+                                    <div className="detail-section">
+                                        <h4 className="detail-section-title">Dynamic Source Data</h4>
+                                        <div className="detail-list">
+                                            {dynamicKeys.map(key => (
+                                                <div key={key} className="detail-row">
+                                                    <span className="detail-label" style={{ textTransform: 'capitalize' }}>
+                                                        {key.replace(/_/g, ' ')}
+                                                    </span>
+                                                    <span>{String(customData[key]) || '—'}</span>
                                                 </div>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="divider" style={{ marginTop: 'var(--space-4)' }} />
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {/* Dates */}
                             <div className="detail-section">

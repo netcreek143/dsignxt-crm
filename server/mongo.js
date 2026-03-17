@@ -58,6 +58,11 @@ const leadSchema = new mongoose.Schema({
   sourceLabel: String,
   statusId: { type: String, default: 's1' },
   temperature: { type: String, default: 'warm' },
+  utm_source: String,
+  utm_medium: String,
+  utm_campaign: String,
+  utm_term: String,
+  utm_content: String,
   customData: { type: String, default: '{}' },
 }, { timestamps: true });
 
