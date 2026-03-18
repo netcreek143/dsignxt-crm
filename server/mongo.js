@@ -32,6 +32,8 @@ const clientSchema = new mongoose.Schema({
   customFields: { type: String, default: '{}' }, // Store as JSON string to maintain compatibility with existing logic or use Mixed
   notes: String,
   assignedUsers: { type: String, default: '[]' },
+  aiChatEnabled: { type: Boolean, default: true },
+  aiAnalysisEnabled: { type: Boolean, default: true },
 }, { timestamps: true });
 
 const integrationSchema = new mongoose.Schema({
@@ -64,6 +66,7 @@ const leadSchema = new mongoose.Schema({
   utm_term: String,
   utm_content: String,
   customData: { type: String, default: '{}' },
+  aiAnalysis: { type: String, default: '' }, // New field for storing LLM analysis
 }, { timestamps: true });
 
 const userSchema = new mongoose.Schema({

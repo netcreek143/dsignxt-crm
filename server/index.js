@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { connectDB, initMongoSeeds, User, Client, Integration, Lead } from './mongo.js';
@@ -132,6 +133,8 @@ app.patch('/api/clients/:id', async (req, res) => {
         existing.status = req.body.status ?? existing.status;
         existing.notes = req.body.notes ?? existing.notes;
         existing.customFields = req.body.customFields ? JSON.stringify(req.body.customFields) : existing.customFields;
+        existing.aiChatEnabled = req.body.aiChatEnabled ?? existing.aiChatEnabled;
+        existing.aiAnalysisEnabled = req.body.aiAnalysisEnabled ?? existing.aiAnalysisEnabled;
 
         await existing.save();
 
@@ -164,6 +167,59 @@ app.post('/api/integrations', async (req, res) => {
         await newIntegration.save();
         res.status(201).json(await Integration.findOne({ id }).lean());
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// -----------------------------------------
+// CRM API: AI & LLM
+// -----------------------------------------
+import { analyzeLead, getChatResponse } from './ai.js';
+
+app.post('/api/ai/analyze-lead/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const lead = await Lead.findOne({ id });
+        if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+        const analysis = await analyzeLead(lead);
+        lead.aiAnalysis = analysis;
+        await lead.save();
+
+        res.json({ success: true, analysis });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/ai/chat', async (req, res) => {
+    try {
+        const { query, userId } = req.body;
+        const user = await User.findOne({ id: userId });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Scoping leads based on role
+        let leads;
+        if (user.role === 'client') {
+            leads = await Lead.find({ clientId: user.clientId }).lean();
+            // Check if AI chat is enabled for this client
+            const client = await Client.findOne({ id: user.clientId });
+            if (!client || !client.aiChatEnabled) {
+                return res.status(403).json({ error: 'AI features are disabled for your account.' });
+            }
+        } else {
+            // Internal agency staff see all leads or filter by selected client if needed
+            // For now, give them access to all leads in the chat context
+            leads = await Lead.find({}).limit(50).sort({ createdAt: -1 }).lean();
+        }
+
+        const response = await getChatResponse(query, leads, user.role);
+        res.json({ success: true, response });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/ai/status', (req, res) => {
+    res.json({
+        gemini: !!process.env.GEMINI_API_KEY,
+        groq: !!process.env.GROQ_API_KEY,
+        mistral: !!process.env.MISTRAL_API_KEY
+    });
 });
 
 // -----------------------------------------

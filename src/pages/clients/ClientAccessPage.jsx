@@ -7,6 +7,8 @@ const AVAILABLE_MODULES = [
     { id: 'leads', label: 'Leads' },
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'analytics', label: 'Analytics' },
+    { id: 'ai_chat', label: 'AI Chatbot' },
+    { id: 'ai_analysis', label: 'AI Lead Analysis' },
     { id: 'settings', label: 'Settings' }
 ];
 

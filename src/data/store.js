@@ -24,6 +24,8 @@ const useStore = create((set, get) => ({
     isAuth: false,
     sidebarCollapsed: false,
     searchQuery: '',
+    aiMessages: [], // { role: 'user' | 'assistant', content: string }
+    isAiLoading: false,
 
     // Actions
     login: async (email, password) => {
@@ -386,6 +388,54 @@ const useStore = create((set, get) => ({
     getClientSources: (clientId) => get().sources.filter(s => s.clientId === clientId),
     getSourceIntegration: (sourceId) => get().integrations.find(i => i.sourceId === sourceId),
     getUnreadNotifications: () => get().notifications.filter(n => !n.isRead),
+
+    // AI Actions
+    sendAiChat: async (message) => {
+        const { currentUser, aiMessages } = get();
+        const newMessage = { role: 'user', content: message };
+        set({ aiMessages: [...aiMessages, newMessage], isAiLoading: true });
+
+        try {
+            const res = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: message, userId: currentUser.id })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                set(s => ({ 
+                    aiMessages: [...s.aiMessages, { role: 'assistant', content: data.response }],
+                    isAiLoading: false 
+                }));
+            } else {
+                set(s => ({ 
+                    aiMessages: [...s.aiMessages, { role: 'assistant', content: `Error: ${data.error}` }],
+                    isAiLoading: false 
+                }));
+            }
+        } catch (e) {
+            set(s => ({ 
+                aiMessages: [...s.aiMessages, { role: 'assistant', content: 'Connection error' }],
+                isAiLoading: false 
+            }));
+        }
+    },
+
+    analyzeLead: async (leadId) => {
+        try {
+            const res = await fetch(`/api/ai/analyze-lead/${leadId}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                set(s => ({
+                    leads: s.leads.map(l => l.id === leadId ? { ...l, aiAnalysis: data.analysis } : l)
+                }));
+                return data.analysis;
+            }
+        } catch (e) { console.error('AI Analysis failed', e); }
+        return null;
+    },
+
+    clearAiChat: () => set({ aiMessages: [] }),
 }));
 
 export default useStore;

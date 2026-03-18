@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, ChevronDown, ChevronUp, Globe, Facebook, Chrome, Eye, MoreHorizontal } from 'lucide-react';
+import { Search, Filter, Download, ChevronDown, ChevronUp, Globe, Facebook, Chrome, Eye, MoreHorizontal, Sparkles } from 'lucide-react';
 import useStore from '../../data/store';
 import LeadDetailDrawer from './LeadDetailDrawer';
 import './Leads.css';
@@ -14,6 +14,7 @@ export default function LeadsPage() {
     const getFilteredLeads = useStore(s => s.getFilteredLeads);
     const getClientData = useStore(s => s.getClient);
     const getUser = useStore(s => s.getUser);
+    const analyzeLead = useStore(s => s.analyzeLead);
 
     const [filters, setFilters] = useState({});
     const [search, setSearch] = useState('');
@@ -212,7 +213,16 @@ export default function LeadsPage() {
                                 {columnsToDisplay.map(col => (
                                     <td key={col}>{renderCell(lead, col)}</td>
                                 ))}
-                                <td><button className="btn btn-ghost btn-icon btn-sm" onClick={e => { e.stopPropagation(); setSelectedLeadId(lead.id); }}><Eye size={14} /></button></td>
+                                <td>
+                                    <div className="flex gap-1">
+                                        <button className="btn btn-ghost btn-icon btn-sm text-indigo-600 hover:bg-indigo-50" title="AI Analysis" onClick={e => { e.stopPropagation(); analyzeLead(lead.id); }} disabled={lead.aiAnalysis}>
+                                            <Sparkles size={14} className={lead.aiAnalysis ? '' : 'animate-pulse'} />
+                                        </button>
+                                        <button className="btn btn-ghost btn-icon btn-sm" onClick={e => { e.stopPropagation(); setSelectedLeadId(lead.id); }}>
+                                            <Eye size={14} />
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

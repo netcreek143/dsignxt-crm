@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
+import AIChatWidget from '../ai/AIChatWidget';
 import useStore from '../../data/store';
 import './AppLayout.css';
 
@@ -16,6 +17,7 @@ export default function AppLayout() {
                     <Outlet />
                 </main>
             </div>
+            <AIChatWidget />
         </div>
     );
 }
